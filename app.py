@@ -77,81 +77,158 @@ def trigger_scroll_to_top():
     """, unsafe_allow_html=True)
 
 
-def setup_cancel_button_js(btn_id: str):
-    """Gắn sự kiện click thật vào nút Hủy quá trình trên parent window thông qua components.html."""
-    components.html(f"""
-        <style>
-            body {{ margin: 0; padding: 0; overflow: hidden; display: none; }}
-        </style>
-        <script>
-            (function() {{
-                function findAndStop(doc) {{
-                    try {{
-                        const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid="stHeader"] button, button'));
-                        for (const b of allBtns) {{
-                            const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-                            if (txt === 'stop' || txt === 'stopping...') {{
-                                b.click();
-                                return true;
-                            }}
-                        }}
-                        const icon = doc.querySelector('[data-testid="stStatusWidgetRunningIcon"], [data-testid="stStatusWidgetRunningManIcon"]');
-                        if (icon) {{
-                            const btn = icon.closest('button') || (icon.parentElement && icon.parentElement.querySelector('button'));
-                            if (btn) {{
-                                btn.click();
-                                return true;
-                            }}
-                        }}
-                    }} catch(e) {{}}
-                    return false;
-                }}
+_CANCEL_BUTTON_JS = """
+<style>
+    body { margin: 0; padding: 0; overflow: hidden; display: none; }
+</style>
+<script>
+    (function () {
+        function findStopButton(doc) {
+            try {
+                const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid="stHeader"] button, button'));
+                for (const b of allBtns) {
+                    const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+                    if (txt === 'stop' || txt === 'stopping...') {
+                        return b;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
 
-                function attach() {{
-                    try {{
-                        const doc = window.parent.document;
-                        if (!doc) return false;
-                        
-                        if (doc.activeElement && typeof doc.activeElement.blur === 'function') {{
-                            doc.activeElement.blur();
-                        }}
+        function findHiddenButton(doc, hiddenKey) {
+            try {
+                return doc.querySelector('.st-key-' + hiddenKey + ' button');
+            } catch (e) {
+                return null;
+            }
+        }
 
-                        const btn = doc.getElementById('{btn_id}');
-                        if (!btn) return false;
-                        
-                        btn.style.cursor = 'pointer';
-                        btn.onclick = function(e) {{
-                            if (e) {{
-                                e.preventDefault();
-                                e.stopPropagation();
-                            }}
-                            btn.style.opacity = '0.6';
-                            btn.style.pointerEvents = 'none';
-                            btn.innerText = 'Đang dừng...';
-                            
-                            const stopped = findAndStop(doc);
-                            if (!stopped) {{
-                                window.parent.location.reload();
-                            }}
-                        }};
-                        return true;
-                    }} catch(err) {{
-                        return false;
-                    }}
-                }}
+        // Sau khi bấm nút hủy ẩn, chờ giao diện được dựng lại. Nếu quá lâu mà script
+        // vẫn đang chạy thì bấm thêm nút Stop gốc của Streamlit để chắc chắn dừng.
+        function watchBackstop(doc, hiddenKey) {
+            let waited = 0;
+            const timer = setInterval(function () {
+                waited += 250;
+                if (!doc.querySelector('.st-key-' + hiddenKey)) {
+                    clearInterval(timer);
+                    return;
+                }
+                if (waited >= 8000) {
+                    clearInterval(timer);
+                    const stop = findStopButton(doc);
+                    if (stop) {
+                        stop.click();
+                    }
+                }
+            }, 250);
+        }
 
-                if (!attach()) {{
-                    let count = 0;
-                    const timer = setInterval(function() {{
-                        count++;
-                        if (attach() || count > 40) {{
-                            clearInterval(timer);
-                        }}
-                    }}, 50);
-                }}
-            }})();
-        </script>
-    """, height=0, width=0)
+        function attach(doc, btnId, hiddenKey) {
+            const btn = doc.getElementById(btnId);
+            if (!btn) return false;
+            if (btn.dataset.cancelBound === '1') return true;
+            btn.dataset.cancelBound = '1';
+            btn.style.cursor = 'pointer';
+
+            btn.onclick = function (e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (btn.dataset.cancelling === '1') return;
+                btn.dataset.cancelling = '1';
+                setTimeout(function () { delete btn.dataset.cancelling; }, 4000);
+
+                btn.style.opacity = '0.75';
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg> Đang hủy...';
+
+                // Bấm nút Streamlit ẩn để phát sinh rerun request: script đang chạy bị
+                // ngắt ngay tại điểm cập nhật tiến trình kế tiếp và giao diện tự trở về
+                // trạng thái bình thường, không cần tải lại trang.
+                let tries = 0;
+                const seek = setInterval(function () {
+                    tries++;
+                    const hidden = findHiddenButton(doc, hiddenKey);
+                    if (hidden) {
+                        clearInterval(seek);
+                        const holder = hidden.closest('[class*="st-key-"]');
+                        if (holder) holder.style.display = 'none';
+                        hidden.click();
+                        watchBackstop(doc, hiddenKey);
+                        return;
+                    }
+                    if (tries >= 20) {
+                        clearInterval(seek);
+                        const stop = findStopButton(doc);
+                        if (stop) {
+                            stop.click();
+                        } else {
+                            window.parent.location.reload();
+                        }
+                    }
+                }, 100);
+            };
+            return true;
+        }
+
+        let doc = null;
+        try {
+            doc = window.parent.document;
+        } catch (e) {
+            doc = null;
+        }
+
+        if (doc) {
+            const btnId = '__BTN_ID__';
+            const hiddenKey = '__HIDDEN_KEY__';
+            if (!attach(doc, btnId, hiddenKey)) {
+                let count = 0;
+                const timer = setInterval(function () {
+                    count++;
+                    if (attach(doc, btnId, hiddenKey) || count > 40) {
+                        clearInterval(timer);
+                    }
+                }, 50);
+            }
+        }
+    })();
+</script>
+"""
+
+
+def _mark_cancel_requested(notice_key: str) -> None:
+    """Callback chạy ở đầu rerun khi người dùng bấm nút Hủy quá trình."""
+    st.session_state[notice_key] = True
+
+
+def render_hidden_cancel_button(notice_key: str, widget_key: str) -> None:
+    """
+    Nút Streamlit ẩn, được nút Hủy (HTML) bấm hộ để phát sinh rerun request.
+    Nút này bị ẩn bằng CSS thông qua class .st-key-<widget_key>.
+    """
+    st.button(
+        "Hủy quá trình",
+        key=widget_key,
+        on_click=_mark_cancel_requested,
+        args=(notice_key,),
+        help="Nút nội bộ dùng để hủy quá trình đang tạo âm thanh.",
+    )
+
+
+def setup_cancel_button_js(btn_id: str, hidden_btn_key: str):
+    """
+    Gắn sự kiện click thật vào nút Hủy quá trình trên parent window.
+
+    Nút Hủy sẽ bấm vào nút Streamlit ẩn (key=hidden_btn_key) để phát sinh rerun
+    request, nhờ đó quá trình đang chạy bị ngắt ngay tại điểm cập nhật tiến trình
+    kế tiếp và giao diện tự trở về trạng thái bình thường.
+    """
+    components.html(
+        _CANCEL_BUTTON_JS.replace("__BTN_ID__", btn_id).replace("__HIDDEN_KEY__", hidden_btn_key),
+        height=0,
+        width=0,
+    )
 
 
 def prune_server_storage(output_dir: str, max_files: int = MAX_STORED_FILES) -> set:
@@ -622,7 +699,13 @@ with tab_general:
 
     with col_g2:
         st.subheader(":material/volume_up: Kết quả âm thanh")
-        if btn_gen_g:
+        cancelled_now = st.session_state.pop("ll_cancelled_general", False)
+        if cancelled_now:
+            st.warning(
+                "Đã hủy quá trình tạo âm thanh. Văn bản và cài đặt của bạn vẫn được giữ nguyên.",
+                icon=":material/cancel:",
+            )
+        if btn_gen_g and not cancelled_now:
             if not user_text or not user_text.strip():
                 st.warning("Vui lòng nhập văn bản trước khi bấm chuyển đổi!", icon=":material/warning:")
             else:
@@ -668,6 +751,10 @@ with tab_general:
                             #cancel-g-btn:active {
                                 transform: scale(0.98);
                             }
+                            /* Ẩn nút hủy nội bộ của Streamlit (chỉ dùng để kích hoạt hủy) */
+                            .st-key-ll_cancel_general {
+                                display: none !important;
+                            }
                         </style>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
@@ -686,7 +773,8 @@ with tab_general:
                             </button>
                         </div>
                     """, unsafe_allow_html=True)
-                    setup_cancel_button_js("cancel-g-btn")
+                    render_hidden_cancel_button("ll_cancelled_general", "ll_cancel_general")
+                    setup_cancel_button_js("cancel-g-btn", "ll_cancel_general")
                     g_prog = st.progress(0.0, text="Khởi động bộ chuyển đổi âm thanh...")
 
                 def on_g_progress(pct: float, msg: str):
@@ -694,6 +782,7 @@ with tab_general:
 
                 fname = ""
                 fpath = ""
+                finished = False
                 try:
                     start_time = datetime.datetime.now()
                     fname = f"tts_{start_time.strftime('%Y%m%d_%H%M%S')}.mp3"
@@ -708,6 +797,7 @@ with tab_general:
                         output_filepath=fpath,
                         progress_callback=on_g_progress
                     )
+                    finished = True
                     progress_container_g.empty()
                     duration = (datetime.datetime.now() - start_time).total_seconds()
                     st.success(f"Hoàn tất trong {duration:.2f} giây!", icon=":material/check_circle:")
@@ -733,12 +823,16 @@ with tab_general:
                     sync_and_cleanup_history(OUTPUT_DIR)
                 except Exception as ex:
                     progress_container_g.empty()
-                    if fpath and os.path.exists(fpath):
+                    st.warning(f"Quá trình đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
+                finally:
+                    # Khi bấm Hủy, Streamlit ngắt script bằng exception điều khiển (kế thừa
+                    # BaseException) nên khối except ở trên không chạy. Dọn file MP3 dở
+                    # dang tại đây (tuyệt đối không gọi st.* hay session_state trong finally).
+                    if not finished and fpath and os.path.exists(fpath):
                         try:
                             os.remove(fpath)
                         except OSError:
                             pass
-                    st.warning(f"Quá trình đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
 
         render_paginated_history("general", "page_general", OUTPUT_DIR)
 
@@ -926,7 +1020,13 @@ with tab_ielts:
     with col_i2:
         st.subheader(":material/volume_up: Audio bài thi IELTS hoàn chỉnh")
         
-        if btn_gen_ielts:
+        cancelled_now_i = st.session_state.pop("ll_cancelled_ielts", False)
+        if cancelled_now_i:
+            st.warning(
+                "Đã hủy quá trình tạo bài nghe IELTS. Kịch bản và cài đặt của bạn vẫn được giữ nguyên.",
+                icon=":material/cancel:",
+            )
+        if btn_gen_ielts and not cancelled_now_i:
             if not script_input or not script_input.strip():
                 st.warning("Vui lòng nhập nội dung kịch bản bài nghe!", icon=":material/warning:")
             else:
@@ -972,6 +1072,10 @@ with tab_ielts:
                             #cancel-ielts-btn:active {
                                 transform: scale(0.98);
                             }
+                            /* Ẩn nút hủy nội bộ của Streamlit (chỉ dùng để kích hoạt hủy) */
+                            .st-key-ll_cancel_ielts {
+                                display: none !important;
+                            }
                         </style>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
@@ -990,7 +1094,8 @@ with tab_ielts:
                             </button>
                         </div>
                     """, unsafe_allow_html=True)
-                    setup_cancel_button_js("cancel-ielts-btn")
+                    render_hidden_cancel_button("ll_cancelled_ielts", "ll_cancel_ielts")
+                    setup_cancel_button_js("cancel-ielts-btn", "ll_cancel_ielts")
                     ielts_prog = st.progress(0.0, text="Khởi động thiết lập bài thi Cambridge...")
 
                 def on_ielts_progress(pct: float, msg: str):
@@ -998,6 +1103,7 @@ with tab_ielts:
 
                 fname = ""
                 fpath = ""
+                finished = False
                 try:
                     start_time = datetime.datetime.now()
                     fname = f"IELTS_Listening_{start_time.strftime('%Y%m%d_%H%M%S')}.mp3"
@@ -1017,6 +1123,7 @@ with tab_ielts:
                         output_filepath=fpath,
                         progress_callback=on_ielts_progress
                     )
+                    finished = True
                     progress_container_i.empty()
 
                     # Đọc thời lượng bài nghe
@@ -1060,12 +1167,16 @@ with tab_ielts:
                     sync_and_cleanup_history(OUTPUT_DIR)
                 except Exception as ex:
                     progress_container_i.empty()
-                    if fpath and os.path.exists(fpath):
+                    st.warning(f"Quá trình tạo bài nghe đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
+                finally:
+                    # Khi bấm Hủy, Streamlit ngắt script bằng exception điều khiển (kế thừa
+                    # BaseException) nên khối except ở trên không chạy. Dọn file MP3 dở
+                    # dang tại đây (tuyệt đối không gọi st.* hay session_state trong finally).
+                    if not finished and fpath and os.path.exists(fpath):
                         try:
                             os.remove(fpath)
                         except OSError:
                             pass
-                    st.warning(f"Quá trình tạo bài nghe đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
 
         render_paginated_history("ielts", "page_ielts", OUTPUT_DIR)
 
