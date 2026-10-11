@@ -550,8 +550,8 @@ with tab_general:
                 st.warning("Vui lòng nhập văn bản trước khi bấm chuyển đổi!", icon=":material/warning:")
             else:
                 trigger_scroll_to_top()
-                progress_container_g = st.container()
-                with progress_container_g:
+                progress_container_g = st.empty()
+                with progress_container_g.container():
                     st.markdown("""
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
@@ -811,8 +811,8 @@ with tab_ielts:
                 st.warning("Vui lòng nhập nội dung kịch bản bài nghe!", icon=":material/warning:")
             else:
                 trigger_scroll_to_top()
-                progress_container_i = st.container()
-                with progress_container_i:
+                progress_container_i = st.empty()
+                with progress_container_i.container():
                     st.markdown("""
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
