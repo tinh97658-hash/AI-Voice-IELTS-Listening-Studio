@@ -554,27 +554,31 @@ with tab_general:
                 with progress_container_g.container():
                     st.markdown("""
                         <style>
-                            /* Khóa toàn bộ cột nhập liệu và thiết lập bên trái */
-                            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child {
+                            /* Khóa toàn bộ cột thiết lập bên trái */
+                            [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
                                 pointer-events: none !important;
-                                opacity: 0.52 !important;
-                                filter: grayscale(0.2) !important;
+                                opacity: 0.45 !important;
+                                filter: grayscale(0.3) !important;
                                 user-select: none !important;
                                 cursor: not-allowed !important;
                                 transition: opacity 0.25s ease;
                             }
-                            /* Khóa chuyển tab chính để tránh bị ngắt quá trình */
-                            .stTabs [data-baseweb="tab-list"] {
+                            /* Khóa chuyển tab chính và tab phụ để tránh bị ngắt quá trình */
+                            [data-testid="stTabs"] button, [data-testid="stTab"], .stTabs button {
                                 pointer-events: none !important;
-                                opacity: 0.55 !important;
+                                opacity: 0.45 !important;
                                 cursor: not-allowed !important;
                             }
-                            /* Khóa các nút tương tác ở phần lịch sử phía dưới */
-                            [data-testid="stExpander"] button, [data-testid="stExpander"] a {
+                            /* Khóa toàn bộ nút bấm khác (ngoại trừ nút Hủy) */
+                            button:not(#cancel-g-btn):not(#cancel-ielts-btn) {
                                 pointer-events: none !important;
-                                opacity: 0.55 !important;
+                                opacity: 0.5 !important;
                             }
-                            /* Đảm bảo nút Hủy ở góc trên vẫn luôn bấm được */
+                            /* Khóa thanh slider, selectbox, radio, file uploader, expander */
+                            [data-testid="stSlider"], [data-testid="stSelectbox"], [data-testid="stRadio"], [data-testid="stFileUploader"], [data-testid="stExpander"] {
+                                pointer-events: none !important;
+                            }
+                            /* Đảm bảo nút Hủy luôn hoạt động bình thường */
                             #cancel-g-btn {
                                 pointer-events: auto !important;
                                 cursor: pointer !important;
@@ -582,23 +586,7 @@ with tab_general:
                             }
                         </style>
                         <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="(function(){
-                                 try {
-                                     const doc = window.parent.document || document;
-                                     if (doc.activeElement && typeof doc.activeElement.blur === 'function') {
-                                         doc.activeElement.blur();
-                                     }
-                                     function blockInputs(e) {
-                                         const hasCancel = doc.querySelector('#cancel-g-btn') || doc.querySelector('#cancel-ielts-btn');
-                                         if (hasCancel && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
-                                             e.preventDefault();
-                                             e.stopPropagation();
-                                         }
-                                     }
-                                     doc.addEventListener('keydown', blockInputs, true);
-                                     doc.addEventListener('paste', blockInputs, true);
-                                 } catch(e){}
-                             })(); this.remove();" 
+                             onload="try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){};this.remove();" 
                              style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
@@ -869,24 +857,28 @@ with tab_ielts:
                     st.markdown("""
                         <style>
                             /* Khóa toàn bộ cột thiết lập bài thi IELTS bên trái */
-                            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child {
+                            [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
                                 pointer-events: none !important;
-                                opacity: 0.52 !important;
-                                filter: grayscale(0.2) !important;
+                                opacity: 0.45 !important;
+                                filter: grayscale(0.3) !important;
                                 user-select: none !important;
                                 cursor: not-allowed !important;
                                 transition: opacity 0.25s ease;
                             }
-                            /* Khóa chuyển tab chính để tránh bị ngắt quá trình */
-                            .stTabs [data-baseweb="tab-list"] {
+                            /* Khóa chuyển tab chính và tab phụ để tránh bị ngắt quá trình */
+                            [data-testid="stTabs"] button, [data-testid="stTab"], .stTabs button {
                                 pointer-events: none !important;
-                                opacity: 0.55 !important;
+                                opacity: 0.45 !important;
                                 cursor: not-allowed !important;
                             }
-                            /* Khóa các nút tương tác ở phần lịch sử phía dưới */
-                            [data-testid="stExpander"] button, [data-testid="stExpander"] a {
+                            /* Khóa toàn bộ nút bấm khác (ngoại trừ nút Hủy) */
+                            button:not(#cancel-g-btn):not(#cancel-ielts-btn) {
                                 pointer-events: none !important;
-                                opacity: 0.55 !important;
+                                opacity: 0.5 !important;
+                            }
+                            /* Khóa thanh slider, selectbox, radio, file uploader, expander */
+                            [data-testid="stSlider"], [data-testid="stSelectbox"], [data-testid="stRadio"], [data-testid="stFileUploader"], [data-testid="stExpander"] {
+                                pointer-events: none !important;
                             }
                             /* Đảm bảo nút Hủy ở góc trên vẫn luôn bấm được */
                             #cancel-ielts-btn {
@@ -896,23 +888,7 @@ with tab_ielts:
                             }
                         </style>
                         <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="(function(){
-                                 try {
-                                     const doc = window.parent.document || document;
-                                     if (doc.activeElement && typeof doc.activeElement.blur === 'function') {
-                                         doc.activeElement.blur();
-                                     }
-                                     function blockInputs(e) {
-                                         const hasCancel = doc.querySelector('#cancel-g-btn') || doc.querySelector('#cancel-ielts-btn');
-                                         if (hasCancel && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
-                                             e.preventDefault();
-                                             e.stopPropagation();
-                                         }
-                                     }
-                                     doc.addEventListener('keydown', blockInputs, true);
-                                     doc.addEventListener('paste', blockInputs, true);
-                                 } catch(e){}
-                             })(); this.remove();" 
+                             onload="try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){};this.remove();" 
                              style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
