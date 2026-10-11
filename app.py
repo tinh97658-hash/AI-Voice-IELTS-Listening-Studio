@@ -569,25 +569,29 @@ with tab_general:
                                 opacity: 0.45 !important;
                                 cursor: not-allowed !important;
                             }
-                            /* Khóa toàn bộ nút bấm khác (ngoại trừ nút Hủy) */
-                            button:not(#cancel-g-btn):not(#cancel-ielts-btn) {
-                                pointer-events: none !important;
-                                opacity: 0.5 !important;
-                            }
                             /* Khóa thanh slider, selectbox, radio, file uploader, expander */
                             [data-testid="stSlider"], [data-testid="stSelectbox"], [data-testid="stRadio"], [data-testid="stFileUploader"], [data-testid="stExpander"] {
                                 pointer-events: none !important;
                             }
-                            /* Đảm bảo nút Hủy luôn hoạt động bình thường */
-                            #cancel-g-btn {
+                            /* Đảm bảo nút Stop gốc của Streamlit trên header luôn bấm được */
+                            header button, [data-testid="stHeader"] button {
+                                pointer-events: auto !important;
+                                opacity: 1 !important;
+                            }
+                            /* Đảm bảo nút Hủy luôn bấm được và hiển thị hiệu ứng rõ ràng */
+                            #cancel-g-btn, #cancel-g-btn * {
                                 pointer-events: auto !important;
                                 cursor: pointer !important;
                                 opacity: 1 !important;
                             }
+                            #cancel-g-btn:hover {
+                                background-color: #DC2626 !important;
+                                transform: scale(1.02);
+                            }
+                            #cancel-g-btn:active {
+                                transform: scale(0.98);
+                            }
                         </style>
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){};this.remove();" 
-                             style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
                                 <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
@@ -599,14 +603,37 @@ with tab_general:
                                     Đã tạm thời khóa các ô nhập & điều khiển bên trái để bảo toàn quá trình tạo
                                 </div>
                             </div>
-                            <button id="cancel-g-btn" onclick="(function(){
-                                const stopBtn = window.parent.document.querySelector('[data-testid=\\'stStatusWidget\\'] button, button[aria-label=\\'Stop\\']');
-                                if (stopBtn) { stopBtn.click(); } else { window.parent.location.reload(); }
-                            })()" style="background-color: #EF4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.25);">
+                            <button id="cancel-g-btn" type="button" style="background-color: #EF4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.25); transition: all 0.15s ease;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
                                 Hủy quá trình
                             </button>
                         </div>
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
+                             onload="(function(){
+                                 try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){}
+                                 const btn = document.getElementById('cancel-g-btn');
+                                 if (btn) {
+                                     btn.onclick = function(e) {
+                                         if (e) { e.preventDefault(); e.stopPropagation(); }
+                                         btn.style.opacity = '0.6';
+                                         btn.style.pointerEvents = 'none';
+                                         btn.innerText = 'Đang hủy...';
+                                         try {
+                                             const doc = (window.parent && window.parent !== window) ? window.parent.document : document;
+                                             const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid=\'stHeader\'] button, button'));
+                                             for (const b of allBtns) {
+                                                 const txt = (b.textContent || '').trim().toLowerCase();
+                                                 if (txt === 'stop' || txt === 'stopping...' || b.getAttribute('aria-label') === 'Stop') {
+                                                     b.click();
+                                                     return;
+                                                 }
+                                             }
+                                         } catch(err){}
+                                         window.location.reload();
+                                     };
+                                 }
+                             })(); this.remove();" 
+                             style="display:none;" />
                     """, unsafe_allow_html=True)
                     g_prog = st.progress(0.0, text="Khởi động bộ chuyển đổi âm thanh...")
 
@@ -871,25 +898,29 @@ with tab_ielts:
                                 opacity: 0.45 !important;
                                 cursor: not-allowed !important;
                             }
-                            /* Khóa toàn bộ nút bấm khác (ngoại trừ nút Hủy) */
-                            button:not(#cancel-g-btn):not(#cancel-ielts-btn) {
-                                pointer-events: none !important;
-                                opacity: 0.5 !important;
-                            }
                             /* Khóa thanh slider, selectbox, radio, file uploader, expander */
                             [data-testid="stSlider"], [data-testid="stSelectbox"], [data-testid="stRadio"], [data-testid="stFileUploader"], [data-testid="stExpander"] {
                                 pointer-events: none !important;
                             }
+                            /* Đảm bảo nút Stop gốc của Streamlit trên header luôn bấm được */
+                            header button, [data-testid="stHeader"] button {
+                                pointer-events: auto !important;
+                                opacity: 1 !important;
+                            }
                             /* Đảm bảo nút Hủy ở góc trên vẫn luôn bấm được */
-                            #cancel-ielts-btn {
+                            #cancel-ielts-btn, #cancel-ielts-btn * {
                                 pointer-events: auto !important;
                                 cursor: pointer !important;
                                 opacity: 1 !important;
                             }
+                            #cancel-ielts-btn:hover {
+                                background-color: #DC2626 !important;
+                                transform: scale(1.02);
+                            }
+                            #cancel-ielts-btn:active {
+                                transform: scale(0.98);
+                            }
                         </style>
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){};this.remove();" 
-                             style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
                                 <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
@@ -901,14 +932,37 @@ with tab_ielts:
                                     Đã tạm thời khóa các ô nhập & điều khiển bên trái để bảo toàn quá trình tạo
                                 </div>
                             </div>
-                            <button id="cancel-ielts-btn" onclick="(function(){
-                                const stopBtn = window.parent.document.querySelector('[data-testid=\\'stStatusWidget\\'] button, button[aria-label=\\'Stop\\']');
-                                if (stopBtn) { stopBtn.click(); } else { window.parent.location.reload(); }
-                            })()" style="background-color: #EF4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.25);">
+                            <button id="cancel-ielts-btn" type="button" style="background-color: #EF4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.25); transition: all 0.15s ease;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
                                 Hủy quá trình
                             </button>
                         </div>
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
+                             onload="(function(){
+                                 try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){}
+                                 const btn = document.getElementById('cancel-ielts-btn');
+                                 if (btn) {
+                                     btn.onclick = function(e) {
+                                         if (e) { e.preventDefault(); e.stopPropagation(); }
+                                         btn.style.opacity = '0.6';
+                                         btn.style.pointerEvents = 'none';
+                                         btn.innerText = 'Đang hủy...';
+                                         try {
+                                             const doc = (window.parent && window.parent !== window) ? window.parent.document : document;
+                                             const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid=\'stHeader\'] button, button'));
+                                             for (const b of allBtns) {
+                                                 const txt = (b.textContent || '').trim().toLowerCase();
+                                                 if (txt === 'stop' || txt === 'stopping...' || b.getAttribute('aria-label') === 'Stop') {
+                                                     b.click();
+                                                     return;
+                                                 }
+                                             }
+                                         } catch(err){}
+                                         window.location.reload();
+                                     };
+                                 }
+                             })(); this.remove();" 
+                             style="display:none;" />
                     """, unsafe_allow_html=True)
                     ielts_prog = st.progress(0.0, text="Khởi động thiết lập bài thi Cambridge...")
 
