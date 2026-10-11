@@ -553,11 +553,64 @@ with tab_general:
                 progress_container_g = st.empty()
                 with progress_container_g.container():
                     st.markdown("""
+                        <style>
+                            /* Khóa toàn bộ cột nhập liệu và thiết lập bên trái */
+                            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child {
+                                pointer-events: none !important;
+                                opacity: 0.52 !important;
+                                filter: grayscale(0.2) !important;
+                                user-select: none !important;
+                                cursor: not-allowed !important;
+                                transition: opacity 0.25s ease;
+                            }
+                            /* Khóa chuyển tab chính để tránh bị ngắt quá trình */
+                            .stTabs [data-baseweb="tab-list"] {
+                                pointer-events: none !important;
+                                opacity: 0.55 !important;
+                                cursor: not-allowed !important;
+                            }
+                            /* Khóa các nút tương tác ở phần lịch sử phía dưới */
+                            [data-testid="stExpander"] button, [data-testid="stExpander"] a {
+                                pointer-events: none !important;
+                                opacity: 0.55 !important;
+                            }
+                            /* Đảm bảo nút Hủy ở góc trên vẫn luôn bấm được */
+                            #cancel-g-btn {
+                                pointer-events: auto !important;
+                                cursor: pointer !important;
+                                opacity: 1 !important;
+                            }
+                        </style>
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
+                             onload="(function(){
+                                 try {
+                                     const doc = window.parent.document || document;
+                                     if (doc.activeElement && typeof doc.activeElement.blur === 'function') {
+                                         doc.activeElement.blur();
+                                     }
+                                     function blockInputs(e) {
+                                         const hasCancel = doc.querySelector('#cancel-g-btn') || doc.querySelector('#cancel-ielts-btn');
+                                         if (hasCancel && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
+                                             e.preventDefault();
+                                             e.stopPropagation();
+                                         }
+                                     }
+                                     doc.addEventListener('keydown', blockInputs, true);
+                                     doc.addEventListener('paste', blockInputs, true);
+                                 } catch(e){}
+                             })(); this.remove();" 
+                             style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1.5s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-                                Đang xử lý giọng nói AI...
-                            </span>
+                            <div>
+                                <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1.5s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                                    Đang xử lý giọng nói AI...
+                                </span>
+                                <div style="font-size: 0.76rem; color: #64748B; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    Đã tạm thời khóa các ô nhập & điều khiển bên trái để bảo toàn quá trình tạo
+                                </div>
+                            </div>
                             <button id="cancel-g-btn" onclick="(function(){
                                 const stopBtn = window.parent.document.querySelector('[data-testid=\\'stStatusWidget\\'] button, button[aria-label=\\'Stop\\']');
                                 if (stopBtn) { stopBtn.click(); } else { window.parent.location.reload(); }
@@ -814,11 +867,64 @@ with tab_ielts:
                 progress_container_i = st.empty()
                 with progress_container_i.container():
                     st.markdown("""
+                        <style>
+                            /* Khóa toàn bộ cột thiết lập bài thi IELTS bên trái */
+                            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child {
+                                pointer-events: none !important;
+                                opacity: 0.52 !important;
+                                filter: grayscale(0.2) !important;
+                                user-select: none !important;
+                                cursor: not-allowed !important;
+                                transition: opacity 0.25s ease;
+                            }
+                            /* Khóa chuyển tab chính để tránh bị ngắt quá trình */
+                            .stTabs [data-baseweb="tab-list"] {
+                                pointer-events: none !important;
+                                opacity: 0.55 !important;
+                                cursor: not-allowed !important;
+                            }
+                            /* Khóa các nút tương tác ở phần lịch sử phía dưới */
+                            [data-testid="stExpander"] button, [data-testid="stExpander"] a {
+                                pointer-events: none !important;
+                                opacity: 0.55 !important;
+                            }
+                            /* Đảm bảo nút Hủy ở góc trên vẫn luôn bấm được */
+                            #cancel-ielts-btn {
+                                pointer-events: auto !important;
+                                cursor: pointer !important;
+                                opacity: 1 !important;
+                            }
+                        </style>
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
+                             onload="(function(){
+                                 try {
+                                     const doc = window.parent.document || document;
+                                     if (doc.activeElement && typeof doc.activeElement.blur === 'function') {
+                                         doc.activeElement.blur();
+                                     }
+                                     function blockInputs(e) {
+                                         const hasCancel = doc.querySelector('#cancel-g-btn') || doc.querySelector('#cancel-ielts-btn');
+                                         if (hasCancel && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
+                                             e.preventDefault();
+                                             e.stopPropagation();
+                                         }
+                                     }
+                                     doc.addEventListener('keydown', blockInputs, true);
+                                     doc.addEventListener('paste', blockInputs, true);
+                                 } catch(e){}
+                             })(); this.remove();" 
+                             style="display:none;" />
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1.5s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-                                Đang tổng hợp bài nghe IELTS đa giọng đọc...
-                            </span>
+                            <div>
+                                <span style="font-weight: 600; color: #1E293B; display: inline-flex; align-items: center; gap: 8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1.5s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                                    Đang tổng hợp bài nghe IELTS đa giọng đọc...
+                                </span>
+                                <div style="font-size: 0.76rem; color: #64748B; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    Đã tạm thời khóa các ô nhập & điều khiển bên trái để bảo toàn quá trình tạo
+                                </div>
+                            </div>
                             <button id="cancel-ielts-btn" onclick="(function(){
                                 const stopBtn = window.parent.document.querySelector('[data-testid=\\'stStatusWidget\\'] button, button[aria-label=\\'Stop\\']');
                                 if (stopBtn) { stopBtn.click(); } else { window.parent.location.reload(); }
