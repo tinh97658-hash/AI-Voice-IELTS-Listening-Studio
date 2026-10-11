@@ -77,6 +77,83 @@ def trigger_scroll_to_top():
     """, unsafe_allow_html=True)
 
 
+def setup_cancel_button_js(btn_id: str):
+    """Gắn sự kiện click thật vào nút Hủy quá trình trên parent window thông qua components.html."""
+    components.html(f"""
+        <style>
+            body {{ margin: 0; padding: 0; overflow: hidden; display: none; }}
+        </style>
+        <script>
+            (function() {{
+                function findAndStop(doc) {{
+                    try {{
+                        const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid="stHeader"] button, button'));
+                        for (const b of allBtns) {{
+                            const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+                            if (txt === 'stop' || txt === 'stopping...') {{
+                                b.click();
+                                return true;
+                            }}
+                        }}
+                        const icon = doc.querySelector('[data-testid="stStatusWidgetRunningIcon"], [data-testid="stStatusWidgetRunningManIcon"]');
+                        if (icon) {{
+                            const btn = icon.closest('button') || (icon.parentElement && icon.parentElement.querySelector('button'));
+                            if (btn) {{
+                                btn.click();
+                                return true;
+                            }}
+                        }}
+                    }} catch(e) {{}}
+                    return false;
+                }}
+
+                function attach() {{
+                    try {{
+                        const doc = window.parent.document;
+                        if (!doc) return false;
+                        
+                        if (doc.activeElement && typeof doc.activeElement.blur === 'function') {{
+                            doc.activeElement.blur();
+                        }}
+
+                        const btn = doc.getElementById('{btn_id}');
+                        if (!btn) return false;
+                        
+                        btn.style.cursor = 'pointer';
+                        btn.onclick = function(e) {{
+                            if (e) {{
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            btn.style.opacity = '0.6';
+                            btn.style.pointerEvents = 'none';
+                            btn.innerText = 'Đang dừng...';
+                            
+                            const stopped = findAndStop(doc);
+                            if (!stopped) {{
+                                window.parent.location.reload();
+                            }}
+                        }};
+                        return true;
+                    }} catch(err) {{
+                        return false;
+                    }}
+                }}
+
+                if (!attach()) {{
+                    let count = 0;
+                    const timer = setInterval(function() {{
+                        count++;
+                        if (attach() || count > 40) {{
+                            clearInterval(timer);
+                        }}
+                    }}, 50);
+                }}
+            }})();
+        </script>
+    """, height=0, width=0)
+
+
 def prune_server_storage(output_dir: str, max_files: int = MAX_STORED_FILES) -> set:
     """
     Dọn dẹp các file MP3 cũ nhất trên server để tổng số file không vượt quá max_files.
@@ -608,33 +685,8 @@ with tab_general:
                                 Hủy quá trình
                             </button>
                         </div>
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="(function(){
-                                 try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){}
-                                 const btn = document.getElementById('cancel-g-btn');
-                                 if (btn) {
-                                     btn.onclick = function(e) {
-                                         if (e) { e.preventDefault(); e.stopPropagation(); }
-                                         btn.style.opacity = '0.6';
-                                         btn.style.pointerEvents = 'none';
-                                         btn.innerText = 'Đang hủy...';
-                                         try {
-                                             const doc = (window.parent && window.parent !== window) ? window.parent.document : document;
-                                             const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid=\'stHeader\'] button, button'));
-                                             for (const b of allBtns) {
-                                                 const txt = (b.textContent || '').trim().toLowerCase();
-                                                 if (txt === 'stop' || txt === 'stopping...' || b.getAttribute('aria-label') === 'Stop') {
-                                                     b.click();
-                                                     return;
-                                                 }
-                                             }
-                                         } catch(err){}
-                                         window.location.reload();
-                                     };
-                                 }
-                             })(); this.remove();" 
-                             style="display:none;" />
                     """, unsafe_allow_html=True)
+                    setup_cancel_button_js("cancel-g-btn")
                     g_prog = st.progress(0.0, text="Khởi động bộ chuyển đổi âm thanh...")
 
                 def on_g_progress(pct: float, msg: str):
@@ -937,33 +989,8 @@ with tab_ielts:
                                 Hủy quá trình
                             </button>
                         </div>
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" 
-                             onload="(function(){
-                                 try{if(document.activeElement&&typeof document.activeElement.blur==='function'){document.activeElement.blur();}}catch(e){}
-                                 const btn = document.getElementById('cancel-ielts-btn');
-                                 if (btn) {
-                                     btn.onclick = function(e) {
-                                         if (e) { e.preventDefault(); e.stopPropagation(); }
-                                         btn.style.opacity = '0.6';
-                                         btn.style.pointerEvents = 'none';
-                                         btn.innerText = 'Đang hủy...';
-                                         try {
-                                             const doc = (window.parent && window.parent !== window) ? window.parent.document : document;
-                                             const allBtns = Array.from(doc.querySelectorAll('header button, [data-testid=\'stHeader\'] button, button'));
-                                             for (const b of allBtns) {
-                                                 const txt = (b.textContent || '').trim().toLowerCase();
-                                                 if (txt === 'stop' || txt === 'stopping...' || b.getAttribute('aria-label') === 'Stop') {
-                                                     b.click();
-                                                     return;
-                                                 }
-                                             }
-                                         } catch(err){}
-                                         window.location.reload();
-                                     };
-                                 }
-                             })(); this.remove();" 
-                             style="display:none;" />
                     """, unsafe_allow_html=True)
+                    setup_cancel_button_js("cancel-ielts-btn")
                     ielts_prog = st.progress(0.0, text="Khởi động thiết lập bài thi Cambridge...")
 
                 def on_ielts_progress(pct: float, msg: str):
