@@ -1,0 +1,12 @@
+# Virtual Environment
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary generated files
+outputs/*.mp3
+!outputs/.gitkeep
