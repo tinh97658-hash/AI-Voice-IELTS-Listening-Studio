@@ -1,0 +1,4 @@
+edge-tts>=6.1.12
+streamlit>=1.35.0
+nest-asyncio>=1.6.0
+mutagen>=1.48.1
