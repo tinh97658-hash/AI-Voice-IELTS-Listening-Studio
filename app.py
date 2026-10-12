@@ -823,7 +823,16 @@ with tab_general:
                     sync_and_cleanup_history(OUTPUT_DIR)
                 except Exception as ex:
                     progress_container_g.empty()
-                    st.warning(f"Quá trình đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
+                    err_msg = str(ex)
+                    if "403" in err_msg or "Invalid response status" in err_msg:
+                        st.error(
+                            "⚠️ **Máy chủ Microsoft TTS tạm thời giới hạn kết nối (Lỗi 403 - Rate Limit).**\n\n"
+                            "• **Nguyên nhân**: Bạn vừa tạo đoạn văn dài hoặc máy chủ Bing Speech đang giới hạn tần suất kết nối từ IP của bạn.\n"
+                            "• **Cách xử lý**: Vui lòng đợi **1 – 2 phút** để máy chủ giải phóng IP rồi thử lại.",
+                            icon=":material/error:"
+                        )
+                    else:
+                        st.warning(f"Quá trình đã bị hủy hoặc gặp lỗi: {err_msg}", icon=":material/warning:")
                 finally:
                     # Khi bấm Hủy, Streamlit ngắt script bằng exception điều khiển (kế thừa
                     # BaseException) nên khối except ở trên không chạy. Dọn file MP3 dở
@@ -1167,7 +1176,16 @@ with tab_ielts:
                     sync_and_cleanup_history(OUTPUT_DIR)
                 except Exception as ex:
                     progress_container_i.empty()
-                    st.warning(f"Quá trình tạo bài nghe đã bị hủy hoặc gặp lỗi: {str(ex)}", icon=":material/warning:")
+                    err_msg = str(ex)
+                    if "403" in err_msg or "Invalid response status" in err_msg:
+                        st.error(
+                            "⚠️ **Máy chủ Microsoft TTS tạm thời giới hạn kết nối (Lỗi 403 - Rate Limit).**\n\n"
+                            "• **Nguyên nhân**: Quá trình tạo bài nghe gửi nhiều lượt thoại liên tiếp khiến máy chủ Bing Speech kích hoạt cơ chế bảo vệ chống spam (WAF), hoặc IP mạng đang bị tạm khóa ngắn hạn.\n"
+                            "• **Cách xử lý**: Vui lòng đợi **1 – 2 phút** để máy chủ giải phóng IP rồi bấm **'Tạo bài nghe IELTS ngay'** lại. Hệ thống đã được nâng cấp tự động giãn cách và thử lại thông minh để phòng tránh lỗi này.",
+                            icon=":material/error:"
+                        )
+                    else:
+                        st.warning(f"Quá trình tạo bài nghe đã bị hủy hoặc gặp lỗi: {err_msg}", icon=":material/warning:")
                 finally:
                     # Khi bấm Hủy, Streamlit ngắt script bằng exception điều khiển (kế thừa
                     # BaseException) nên khối except ở trên không chạy. Dọn file MP3 dở

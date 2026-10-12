@@ -148,21 +148,30 @@ def split_text_into_chunks(text: str, max_chars: int = 1500) -> List[str]:
     return chunks if chunks else [text]
 
 
+FALLBACK_VOICES = {
+    "en-IE-EmilyNeural": "en-IE-ConnorNeural",
+}
+
+
 async def _synthesize_chunk_with_retry(
     text: str,
     voice: str,
     rate: str,
     pitch: str,
     volume: str,
-    max_retries: int = 3
+    max_retries: int = 4
 ) -> bytes:
-    """Tạo audio cho một đoạn văn bản kèm cơ chế tự động thử lại khi gặp sự cố mạng."""
+    """
+    Tạo audio cho một đoạn văn bản kèm cơ chế tự động thử lại thông minh khi gặp
+    sự cố mạng, lỗi 403 rate limit từ máy chủ Microsoft hoặc giọng bị lỗi âm thanh.
+    """
     last_err = None
+    curr_voice = voice
     for attempt in range(max_retries):
         try:
             communicate = edge_tts.Communicate(
                 text=text,
-                voice=voice,
+                voice=curr_voice,
                 rate=rate,
                 pitch=pitch,
                 volume=volume
@@ -174,9 +183,33 @@ async def _synthesize_chunk_with_retry(
             data = audio_buffer.getvalue()
             if len(data) > 0:
                 return data
+        except edge_tts.exceptions.NoAudioReceived as e:
+            last_err = e
+            # Nếu giọng bị sự cố từ máy chủ (trả về 0 byte âm thanh), tự động fallback
+            if curr_voice in FALLBACK_VOICES:
+                curr_voice = FALLBACK_VOICES[curr_voice]
+                await asyncio.sleep(0.5)
+                continue
+            elif curr_voice.startswith("en-"):
+                curr_voice = "en-GB-RyanNeural"
+                await asyncio.sleep(0.5)
+                continue
+            await asyncio.sleep(1.0 * (attempt + 1))
         except Exception as e:
             last_err = e
-            await asyncio.sleep(0.8 * (attempt + 1))
+            err_msg = str(e)
+            # Nếu gặp lỗi 403 (Microsoft rate-limit hoặc lệch token Sec-MS-GEC)
+            if "403" in err_msg or "Invalid response status" in err_msg:
+                try:
+                    # Reset lại lệch đồng hồ DRM trong trường hợp bị tính lệch múi giờ
+                    edge_tts.drm.DRM.clock_skew_seconds = 0.0
+                except Exception:
+                    pass
+                # Giãn cách lũy tiến để máy chủ Microsoft giải phóng rate-limit: 2s, 4s, 7s, 10s
+                sleep_sec = 2.0 * (attempt + 1)
+                await asyncio.sleep(sleep_sec)
+            else:
+                await asyncio.sleep(1.0 * (attempt + 1))
             
     if last_err:
         raise last_err
@@ -199,7 +232,7 @@ async def text_to_speech_bytes(
     total_chunks = len(chunks)
     for idx, chunk in enumerate(chunks):
         if idx > 0:
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.6)
         if progress_callback:
             progress_callback(
                 min(0.95, idx / max(1, total_chunks)),
@@ -367,7 +400,6 @@ IELTS_VOICES = {
         {"name": "en-NZ-MitchellNeural", "label": "Mitchell (Nam • Giọng Kiwi bản xứ)", "gender": "Male", "accent": "New Zealand", "difficulty": "medium"}
     ],
     "Irish (IE) • Ireland [Trung bình]": [
-        {"name": "en-IE-EmilyNeural", "label": "Emily (Nữ • Giọng Ireland nhẹ nhàng, Du dương)", "gender": "Female", "accent": "Irish", "difficulty": "medium"},
         {"name": "en-IE-ConnorNeural", "label": "Connor (Nam • Giọng Ireland tự nhiên)", "gender": "Male", "accent": "Irish", "difficulty": "medium"}
     ],
     "Indian (IN) • Anh - Ấn [Khó]": [
@@ -639,7 +671,7 @@ async def _generate_ielts_audio_async(
         combined.write(intro_data)
         # Chèn khoảng dừng 2.0s để thí sinh đọc đề
         combined.write(generate_silence_mp3(2.0))
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.8)
 
     # 2. Xử lý phần nội dung chính
     if is_dialogue:
@@ -653,7 +685,7 @@ async def _generate_ielts_audio_async(
                     f"Đang tạo lượt thoại {idx+1}/{len(turns)}: {speaker}..."
                 )
             if idx > 0:
-                await asyncio.sleep(0.4)
+                await asyncio.sleep(0.8)
             voice = speaker_voice_map.get(speaker, single_voice or "en-GB-RyanNeural")
             line_audio = await text_to_speech_bytes(
                 text=line,
