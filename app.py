@@ -601,6 +601,26 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Thanh bên Sidebar: Cấu hình kết nối & Proxy
+with st.sidebar:
+    st.markdown("### :material/settings: Cài đặt kết nối")
+    st.markdown("---")
+    st.markdown("**🛡️ Proxy kết nối (Khắc phục chặn IP / VPS):**")
+    cur_proxy = os.environ.get("EDGE_TTS_PROXY", "")
+    proxy_input = st.text_input(
+        "Địa chỉ Proxy (HTTP/SOCKS):",
+        value=cur_proxy,
+        placeholder="http://127.0.0.1:7890",
+        help="Dành cho máy chủ đám mây/VPS hoặc khi địa chỉ IP mạng bị Microsoft tạm khóa (Lỗi 403). Để trống nếu dùng mạng bình thường."
+    )
+    if proxy_input.strip():
+        os.environ["EDGE_TTS_PROXY"] = proxy_input.strip()
+        st.success(f"Đang bật Proxy: `{proxy_input.strip()}`", icon=":material/check_circle:")
+    else:
+        os.environ.pop("EDGE_TTS_PROXY", None)
+        st.caption(":material/wifi: Đang kết nối trực tiếp qua IP mạng máy chủ.")
+
+
 # Định nghĩa tên 2 Tabs chính
 TAB_GENERAL_TITLE = ":material/graphic_eq: Văn bản thông thường (TTS)"
 TAB_IELTS_TITLE = ":material/headphones: IELTS Listening Studio"

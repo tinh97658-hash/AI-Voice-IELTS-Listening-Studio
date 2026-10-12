@@ -153,20 +153,29 @@ FALLBACK_VOICES = {
 }
 
 
+def get_configured_proxy() -> Optional[str]:
+    """Lấy địa chỉ proxy nếu được cấu hình qua biến môi trường EDGE_TTS_PROXY hoặc HTTP(S)_PROXY."""
+    p = os.environ.get("EDGE_TTS_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+    return p.strip() if (p and p.strip()) else None
+
+
 async def _synthesize_chunk_with_retry(
     text: str,
     voice: str,
     rate: str,
     pitch: str,
     volume: str,
-    max_retries: int = 4
+    max_retries: int = 4,
+    proxy: Optional[str] = None
 ) -> bytes:
     """
     Tạo audio cho một đoạn văn bản kèm cơ chế tự động thử lại thông minh khi gặp
     sự cố mạng, lỗi 403 rate limit từ máy chủ Microsoft hoặc giọng bị lỗi âm thanh.
+    Hỗ trợ kết nối qua Proxy để vượt qua IP bị chặn.
     """
     last_err = None
     curr_voice = voice
+    proxy_url = proxy or get_configured_proxy()
     for attempt in range(max_retries):
         try:
             communicate = edge_tts.Communicate(
@@ -174,7 +183,8 @@ async def _synthesize_chunk_with_retry(
                 voice=curr_voice,
                 rate=rate,
                 pitch=pitch,
-                volume=volume
+                volume=volume,
+                proxy=proxy_url
             )
             audio_buffer = io.BytesIO()
             async for chunk in communicate.stream():
