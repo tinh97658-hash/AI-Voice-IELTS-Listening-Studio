@@ -153,6 +153,65 @@ FALLBACK_VOICES = {
 }
 
 
+def synthesize_with_gtts(text: str, voice_or_accent: str) -> bytes:
+    """
+    Tạo audio qua Google TTS (gTTS) - Hoạt động 100% trên Cloud/Datacenter không cần Proxy,
+    tự động phân loại Accent tương ứng (UK, US, AU, CA, IN, IE, ZA, VI, v.v.).
+    """
+    v = (voice_or_accent or "").lower()
+    lang = "en"
+    tld = "co.uk"
+    
+    if "vi-vn" in v or "tiếng việt" in v or "hoaimy" in v or "namminh" in v:
+        lang = "vi"
+        tld = "com"
+    elif "us" in v or "american" in v or "jenny" in v or "guy" in v or "aria" in v or "christopher" in v:
+        lang = "en"
+        tld = "com"
+    elif "au" in v or "australian" in v or "natasha" in v or "william" in v:
+        lang = "en"
+        tld = "com.au"
+    elif "ca" in v or "canadian" in v or "clara" in v or "liam" in v:
+        lang = "en"
+        tld = "ca"
+    elif "in" in v or "indian" in v or "neerja" in v or "prabhat" in v:
+        lang = "en"
+        tld = "co.in"
+    elif "ie" in v or "irish" in v or "ireland" in v or "connor" in v or "emily" in v:
+        lang = "en"
+        tld = "ie"
+    elif "za" in v or "south african" in v or "leah" in v or "luke" in v:
+        lang = "en"
+        tld = "co.za"
+    elif "ng" in v or "nigerian" in v or "ezinne" in v or "abeo" in v:
+        lang = "en"
+        tld = "com.ng"
+    elif "sg" in v or "singapore" in v or "luna" in v or "wayne" in v:
+        lang = "en"
+        tld = "com.sg"
+    elif "nz" in v or "new zealand" in v or "kiwi" in v or "molly" in v or "mitchell" in v:
+        lang = "en"
+        tld = "co.nz"
+    elif "ja" in v:
+        lang = "ja"
+        tld = "co.jp"
+    elif "ko" in v:
+        lang = "ko"
+        tld = "co.kr"
+    elif "zh" in v:
+        lang = "zh-CN"
+        tld = "com"
+    else:
+        lang = "en"
+        tld = "co.uk"
+
+    from gtts import gTTS
+    tts = gTTS(text=text, lang=lang, tld=tld)
+    buf = io.BytesIO()
+    tts.write_to_fp(buf)
+    return buf.getvalue()
+
+
 def get_configured_proxy() -> Optional[str]:
     """Lấy địa chỉ proxy nếu được cấu hình qua biến môi trường EDGE_TTS_PROXY hoặc HTTP(S)_PROXY."""
     p = os.environ.get("EDGE_TTS_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
@@ -171,7 +230,7 @@ async def _synthesize_chunk_with_retry(
     """
     Tạo audio cho một đoạn văn bản kèm cơ chế tự động thử lại thông minh khi gặp
     sự cố mạng, lỗi 403 rate limit từ máy chủ Microsoft hoặc giọng bị lỗi âm thanh.
-    Hỗ trợ kết nối qua Proxy để vượt qua IP bị chặn.
+    Nếu môi trường Cloud bị Microsoft chặn hoàn toàn (403), tự động chuyển sang Google TTS.
     """
     last_err = None
     curr_voice = voice
@@ -215,13 +274,27 @@ async def _synthesize_chunk_with_retry(
                     edge_tts.drm.DRM.clock_skew_seconds = 0.0
                 except Exception:
                     pass
-                # Giãn cách lũy tiến để máy chủ Microsoft giải phóng rate-limit: 2s, 4s, 7s, 10s
+                # Nếu không có proxy và gặp 403 trên Cloud, thử fallback sang Google TTS ngay
+                if not proxy_url and attempt >= 1:
+                    try:
+                        gtts_data = synthesize_with_gtts(text, curr_voice)
+                        if len(gtts_data) > 0:
+                            return gtts_data
+                    except Exception:
+                        pass
                 sleep_sec = 2.0 * (attempt + 1)
                 await asyncio.sleep(sleep_sec)
             else:
                 await asyncio.sleep(1.0 * (attempt + 1))
             
     if last_err:
+        # Cứu cánh cuối cùng: Tự động chuyển sang Google TTS để bài nghe không bao giờ bị hỏng
+        try:
+            gtts_data = synthesize_with_gtts(text, voice)
+            if len(gtts_data) > 0:
+                return gtts_data
+        except Exception:
+            pass
         raise last_err
     raise RuntimeError("Không nhận được dữ liệu âm thanh từ dịch vụ TTS.")
 

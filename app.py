@@ -601,24 +601,28 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Thanh bên Sidebar: Cấu hình kết nối & Proxy
+# Thanh bên Sidebar: Trạng thái hệ thống & Cài đặt nâng cao
 with st.sidebar:
-    st.markdown("### :material/settings: Cài đặt kết nối")
+    st.markdown("### :material/tune: Trạng thái hệ thống")
     st.markdown("---")
-    st.markdown("**🛡️ Proxy kết nối (Khắc phục chặn IP / VPS):**")
-    cur_proxy = os.environ.get("EDGE_TTS_PROXY", "")
-    proxy_input = st.text_input(
-        "Địa chỉ Proxy (HTTP/SOCKS):",
-        value=cur_proxy,
-        placeholder="http://127.0.0.1:7890",
-        help="Dành cho máy chủ đám mây/VPS hoặc khi địa chỉ IP mạng bị Microsoft tạm khóa (Lỗi 403). Để trống nếu dùng mạng bình thường."
-    )
-    if proxy_input.strip():
-        os.environ["EDGE_TTS_PROXY"] = proxy_input.strip()
-        st.success(f"Đang bật Proxy: `{proxy_input.strip()}`", icon=":material/check_circle:")
-    else:
-        os.environ.pop("EDGE_TTS_PROXY", None)
-        st.caption(":material/wifi: Đang kết nối trực tiếp qua IP mạng máy chủ.")
+    st.caption("🤖 **Công nghệ**: Dual-Engine AI (Microsoft Edge Neural + Google TTS)")
+    st.info("✨ Hệ thống được kích hoạt cơ chế tự động tối ưu. Người dùng chỉ cần chọn giọng và bấm tạo bài nghe, không cần cài đặt thêm!", icon=":material/verified:")
+    
+    with st.expander("🛠️ Dành cho Quản trị viên (Cấu hình Proxy nâng cao)", expanded=False):
+        st.caption("Tùy chọn cấu hình Proxy nếu Admin muốn ép buộc chạy Edge TTS trên môi trường Cloud hạn chế.")
+        cur_proxy = os.environ.get("EDGE_TTS_PROXY", "")
+        proxy_input = st.text_input(
+            "Địa chỉ Proxy (HTTP/SOCKS):",
+            value=cur_proxy,
+            placeholder="http://127.0.0.1:7890",
+            help="Tùy chọn: Nhập địa chỉ Proxy nếu có."
+        )
+        if proxy_input.strip():
+            os.environ["EDGE_TTS_PROXY"] = proxy_input.strip()
+            st.success(f"Proxy đã bật: `{proxy_input.strip()}`", icon=":material/check_circle:")
+        else:
+            os.environ.pop("EDGE_TTS_PROXY", None)
+            st.caption("Đang ở chế độ kết nối tự động tối ưu.")
 
 
 # Định nghĩa tên 2 Tabs chính
